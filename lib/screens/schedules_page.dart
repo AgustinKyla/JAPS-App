@@ -61,28 +61,15 @@ class _SchedulesPageState extends State<SchedulesPage> {
     String route =
         existing?.route ??
         (store.routes.isNotEmpty ? store.routes.first.label : '');
-    String driver =
-        existing?.driver ??
-        (store.users.where((u) => u.role == UserRole.driver).isNotEmpty
-            ? store.users.firstWhere((u) => u.role == UserRole.driver).name
-            : '');
-    String conductor =
-        existing?.conductor ??
-        (store.users.where((u) => u.role == UserRole.conductor).isNotEmpty
-            ? store.users.firstWhere((u) => u.role == UserRole.conductor).name
-            : '');
+
+    final drivers = store.users.where((u) => u.role == UserRole.driver).toList();
+    final conductors = store.users.where((u) => u.role == UserRole.conductor).toList();
 
     final timeCtrl = TextEditingController(text: existing?.departureTime ?? '');
     final formKey = GlobalKey<FormState>();
-
-    final drivers = store.users
-        .where((u) => u.role == UserRole.driver)
-        .map((u) => u.name)
-        .toList();
-    final conductors = store.users
-        .where((u) => u.role == UserRole.conductor)
-        .map((u) => u.name)
-        .toList();
+    // Preserve the trip's current status (e.g. "completed") when editing -
+    // otherwise saving an edit would silently reset it to "scheduled".
+    final String status = existing?.status ?? 'scheduled';
 
     if (store.buses.isEmpty ||
         store.routes.isEmpty ||
@@ -96,6 +83,15 @@ class _SchedulesPageState extends State<SchedulesPage> {
       );
       return;
     }
+
+    AppUser selectedDriver = drivers.firstWhere(
+      (d) => d.id == existing?.driverId,
+      orElse: () => drivers.first,
+    );
+    AppUser selectedConductor = conductors.firstWhere(
+      (c) => c.id == existing?.conductorId,
+      orElse: () => conductors.first,
+    );
 
     showFormDialog(
       context: context,
@@ -143,19 +139,19 @@ class _SchedulesPageState extends State<SchedulesPage> {
                 labelOf: (v) => v,
                 onChanged: (v) => setLocal(() => route = v ?? route),
               ),
-              AppDropdownField<String>(
+              AppDropdownField<AppUser>(
                 label: 'Driver',
-                value: drivers.contains(driver) ? driver : drivers.first,
+                value: selectedDriver,
                 items: drivers,
-                labelOf: (v) => v,
-                onChanged: (v) => setLocal(() => driver = v ?? driver),
+                labelOf: (u) => u.name,
+                onChanged: (v) => setLocal(() => selectedDriver = v ?? selectedDriver),
               ),
-              AppDropdownField<String>(
+              AppDropdownField<AppUser>(
                 label: 'Conductor',
-                value: conductors.contains(conductor) ? conductor : conductors.first,
+                value: selectedConductor,
                 items: conductors,
-                labelOf: (v) => v,
-                onChanged: (v) => setLocal(() => conductor = v ?? conductor),
+                labelOf: (u) => u.name,
+                onChanged: (v) => setLocal(() => selectedConductor = v ?? selectedConductor),
               ),
 
               // DEPARTURE TIME FIELD
@@ -185,14 +181,17 @@ class _SchedulesPageState extends State<SchedulesPage> {
                       date: date,
                       bus: bus,
                       route: route,
-                      driver: driver,
-                      conductor: conductor,
+                      driverId: selectedDriver.id,
+                      driver: selectedDriver.name,
+                      conductorId: selectedConductor.id,
+                      conductor: selectedConductor.name,
                       departureTime: timeCtrl.text.trim(),
+                      status: status, // preserves "completed" instead of resetting it
                     );
 
                     // 3. Save to Firestore via DataStore
                     if (existing == null) {
-                      store.addSchedule(ScheduleTrip(id: ' ', date: date, bus: bus, route: route, driver: driver, conductor: conductor, departureTime: timeCtrl.text.trim()));
+                      store.addSchedule(newTrip);
                       ScaffoldMessenger.of(context).showSnackBar(
                         buildSnack('Trip scheduled successfully', SnackType.success)
                       );

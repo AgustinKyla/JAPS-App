@@ -107,8 +107,10 @@ class Bus {
   String busNo;
   String plateNumber;
   int capacity;
-  String assignedDriver;
-  String assignedConductor;
+  String assignedDriverId;
+  String assignedDriverName;
+  String assignedConductorId;
+  String assignedConductorName;
   String defaultRoute;
   BusStatus status;
 
@@ -117,8 +119,10 @@ class Bus {
     required this.busNo,
     required this.plateNumber,
     required this.capacity,
-    required this.assignedDriver,
-    required this.assignedConductor,
+    required this.assignedDriverId,
+    required this.assignedDriverName,
+    required this.assignedConductorId,
+    required this.assignedConductorName,
     required this.defaultRoute,
     required this.status,
   });
@@ -129,12 +133,12 @@ class Bus {
       busNo: data['busNo'] ?? '',
       plateNumber: data['plateNumber'] ?? '',
       capacity: data['capacity'] ?? 0,
-      // Some bus_info documents were written using the same
-      // "assignedDriverName"/"assignedConductorName" convention used by the
-      // schedule and remittance collections, so fall back to those keys if
-      // the plain ones aren't present.
-      assignedDriver: data['assignedDriver'] ?? data['assignedDriverName'] ?? '',
-      assignedConductor: data['assignedConductor'] ?? data['assignedConductorName'] ?? '',
+      assignedDriverId: data['assignedDriverId'] ?? '',
+      // Older docs only ever stored the plain name under "assignedDriver" -
+      // keep that as a fallback so those records still display correctly.
+      assignedDriverName: data['assignedDriverName'] ?? data['assignedDriver'] ?? '',
+      assignedConductorId: data['assignedConductorId'] ?? '',
+      assignedConductorName: data['assignedConductorName'] ?? data['assignedConductor'] ?? '',
       defaultRoute: data['defaultRoute'] ?? '',
       status: BusStatus.values.byName(data['status'] ?? 'active'),
     );
@@ -145,14 +149,16 @@ class Bus {
       'busNo': busNo,
       'plateNumber': plateNumber,
       'capacity': capacity,
-      // Write both key variants so this stays compatible regardless of
-      // which convention any existing tooling/documents rely on.
-      'assignedDriver': assignedDriver,
-      'assignedDriverName': assignedDriver,
-      'assignedConductor': assignedConductor,
-      'assignedConductorName': assignedConductor,
+      'assignedDriverId': assignedDriverId,
+      'assignedDriverName': assignedDriverName,
+      'assignedConductorId': assignedConductorId,
+      'assignedConductorName': assignedConductorName,
       'defaultRoute': defaultRoute,
       'status': status.name,
+      // Some bus_info docs already had a busId field mirroring the document
+      // ID - write it going forward so every doc has it, matching the
+      // routeId / scheduleId pattern used elsewhere.
+      'busId': id,
     };
   }
 }
@@ -187,6 +193,9 @@ class BusRoute {
       'origin': origin,
       'destination': destination,
       'distanceKm': distanceKm,
+      // Some route_info docs already had a routeId field mirroring the
+      // document ID - write it going forward so every doc has it.
+      'routeId': id,
     };
   }
 }
@@ -263,7 +272,7 @@ class Remittance {
   int get trips => tripDetails.length;
   double get totalExpenses => expenses.values.fold(0.0, (a, b) => a + b);
   double get netGross => grossIncome - totalExpenses;
-  
+
   // --- New Financial Getters ---
   double get bonus => expenses['Bonus'] ?? 0.0;
   double get diesel => expenses['Diesel / Fuel'] ?? 0.0;
@@ -272,12 +281,12 @@ class Remittance {
   double get netCollection =>
       netGross - driverCommission - conductorCommission - cashDeposit;
 
-  double get totalLess => 
-      driverCommission + 
-      conductorCommission + 
-      bonus + 
-      diesel + 
-      tollFee + 
+  double get totalLess =>
+      driverCommission +
+      conductorCommission +
+      bonus +
+      diesel +
+      tollFee +
       cashDeposit;
 
   double get totalRevenue => cashDeposit + (grossIncome - totalLess);
@@ -323,6 +332,7 @@ class Remittance {
     };
   }
 }
+
 // ==================== FARE SETTINGS MODEL ====================
 class FareSettings {
   double minimumFare;
@@ -381,24 +391,49 @@ String _formatTimeOfDay(DateTime dt) {
   return '$hour12:$minute $period';
 }
 
+// Parses a "h:mm AM/PM" string (as produced by the time picker) and
+// combines it with a calendar date into a single DateTime - the inverse of
+// _formatTimeOfDay, used so departureTime can be stored as one Timestamp.
+DateTime _combineDateAndTime(DateTime datePart, String timeText) {
+  final trimmed = timeText.trim();
+  final spaceIdx = trimmed.lastIndexOf(' ');
+  if (spaceIdx == -1) {
+    return DateTime(datePart.year, datePart.month, datePart.day);
+  }
+  final timePart = trimmed.substring(0, spaceIdx);
+  final period = trimmed.substring(spaceIdx + 1).toUpperCase();
+  final hm = timePart.split(':');
+  int hour = int.tryParse(hm[0]) ?? 0;
+  final minute = hm.length > 1 ? (int.tryParse(hm[1]) ?? 0) : 0;
+  if (period == 'PM' && hour != 12) hour += 12;
+  if (period == 'AM' && hour == 12) hour = 0;
+  return DateTime(datePart.year, datePart.month, datePart.day, hour, minute);
+}
+
 // ==================== SCHEDULE TRIP MODEL ====================
 class ScheduleTrip {
   String id;
   DateTime date;
   String bus;
   String route;
+  String driverId;
   String driver;
+  String conductorId;
   String conductor;
   String departureTime;
+  String status;
 
   ScheduleTrip({
     required this.id,
     required this.date,
     required this.bus,
     required this.route,
+    required this.driverId,
     required this.driver,
+    required this.conductorId,
     required this.conductor,
     required this.departureTime,
+    this.status = 'scheduled',
   });
 
   factory ScheduleTrip.fromFirestore(Map<String, dynamic> data, String documentId) {
@@ -432,23 +467,33 @@ class ScheduleTrip {
     return ScheduleTrip(
       id: documentId,
       date: tripDate,
-      bus: data['busNo'] ?? '', // Updated to match Firestore 'busNo'
+      bus: data['busNo'] ?? '',
       route: data['route'] ?? '',
-      driver: data['assignedDriverName'] ?? '', // Updated to match Firestore 'assignedDriverName'
-      conductor: data['assignedConductorName'] ?? '', // Updated to match Firestore 'assignedConductorName'
+      driverId: data['assignedDriverId'] ?? '',
+      driver: data['assignedDriverName'] ?? '',
+      conductorId: data['assignedConductorId'] ?? '',
+      conductor: data['assignedConductorName'] ?? '',
       departureTime: depTime,
+      status: data['status'] ?? 'scheduled',
     );
   }
 
   Map<String, dynamic> toFirestore() {
     return {
-      'date': Timestamp.fromDate(DateTime(date.year, date.month, date.day)),
-      'departureTime': departureTime, // e.g. "9:33 PM" - stored as-is
+      // Stored as ONE Timestamp combining the date and time-of-day, matching
+      // the convention already used by the existing schedule_records docs -
+      // no separate 'date' field, so every doc has the same shape.
+      'departureTime': Timestamp.fromDate(_combineDateAndTime(date, departureTime)),
       'busNo': bus,
       'route': route,
+      'assignedDriverId': driverId,
       'assignedDriverName': driver,
+      'assignedConductorId': conductorId,
       'assignedConductorName': conductor,
-      'status': 'scheduled', // Recommended to include status
+      'status': status,
+      // Some schedule_records docs already had a scheduleId field mirroring
+      // the document ID - write it going forward so every doc has it.
+      'scheduleId': id,
     };
   }
 }

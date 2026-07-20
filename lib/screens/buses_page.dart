@@ -21,8 +21,8 @@ class _BusesPageState extends State<BusesPage> {
 
   void _openBusForm(BuildContext context, DataStore store, {Bus? existing}) {
     // Prerequisite lists needed for the form's dropdowns.
-    final drivers = store.users.where((u) => u.role == UserRole.driver).map((u) => u.name).toList();
-    final conductors = store.users.where((u) => u.role == UserRole.conductor).map((u) => u.name).toList();
+    final drivers = store.users.where((u) => u.role == UserRole.driver).toList();
+    final conductors = store.users.where((u) => u.role == UserRole.conductor).toList();
 
     if (store.routes.isEmpty || drivers.isEmpty || conductors.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -41,11 +41,13 @@ class _BusesPageState extends State<BusesPage> {
     final busNoCtrl = TextEditingController(text: existing?.busNo ?? '');
     final plateCtrl = TextEditingController(text: existing?.plateNumber ?? '');
     final capacityCtrl = TextEditingController(text: existing?.capacity.toString() ?? '');
-    final driverCtrl = TextEditingController(
-      text: drivers.contains(existing?.assignedDriver) ? existing!.assignedDriver : drivers.first,
+    AppUser selectedDriver = drivers.firstWhere(
+      (d) => d.id == existing?.assignedDriverId,
+      orElse: () => drivers.first,
     );
-    final conductorCtrl = TextEditingController(
-      text: conductors.contains(existing?.assignedConductor) ? existing!.assignedConductor : conductors.first,
+    AppUser selectedConductor = conductors.firstWhere(
+      (c) => c.id == existing?.assignedConductorId,
+      orElse: () => conductors.first,
     );
     String route = (existing != null && store.routes.any((r) => r.label == existing.defaultRoute))
         ? existing.defaultRoute
@@ -123,21 +125,21 @@ class _BusesPageState extends State<BusesPage> {
                     return null;
                   },
                 ),
-                AppDropdownField<String>(
+                AppDropdownField<AppUser>(
                   label: 'Driver',
-                  value: drivers.contains(driverCtrl.text) ? driverCtrl.text : drivers.first,
+                  value: selectedDriver,
                   items: drivers,
-                  labelOf: (v) => v,
-                  onChanged: (v) => setLocal(() => driverCtrl.text = v ?? drivers.first),
+                  labelOf: (u) => u.name,
+                  onChanged: (v) => setLocal(() => selectedDriver = v ?? selectedDriver),
                 ),
 
                 // Assigned Conductor Dropdown
-                AppDropdownField<String>(
+                AppDropdownField<AppUser>(
                   label: 'Conductor',
-                  value: conductors.contains(conductorCtrl.text) ? conductorCtrl.text : conductors.first,
+                  value: selectedConductor,
                   items: conductors,
-                  labelOf: (v) => v,
-                  onChanged: (v) => setLocal(() => conductorCtrl.text = v ?? conductors.first),
+                  labelOf: (u) => u.name,
+                  onChanged: (v) => setLocal(() => selectedConductor = v ?? selectedConductor),
                 ),
                 AppDropdownField<String>(
                     label: 'Default Route',
@@ -166,8 +168,10 @@ class _BusesPageState extends State<BusesPage> {
                           busNo: busNoCtrl.text.trim(), // Keep this as just "01", "02", etc.
                           plateNumber: plateCtrl.text.trim(),
                           capacity: int.parse(capacityCtrl.text.trim()),
-                          assignedDriver: driverCtrl.text.trim(),
-                          assignedConductor: conductorCtrl.text.trim(),
+                          assignedDriverId: selectedDriver.id,
+                          assignedDriverName: selectedDriver.name,
+                          assignedConductorId: selectedConductor.id,
+                          assignedConductorName: selectedConductor.name,
                           defaultRoute: route,
                           status: status,
                         ));
@@ -176,8 +180,10 @@ class _BusesPageState extends State<BusesPage> {
                         existing.busNo = busNoCtrl.text.trim();
                         existing.plateNumber = plateCtrl.text.trim();
                         existing.capacity = int.parse(capacityCtrl.text.trim());
-                        existing.assignedDriver = driverCtrl.text.trim();
-                        existing.assignedConductor = conductorCtrl.text.trim();
+                        existing.assignedDriverId = selectedDriver.id;
+                        existing.assignedDriverName = selectedDriver.name;
+                        existing.assignedConductorId = selectedConductor.id;
+                        existing.assignedConductorName = selectedConductor.name;
                         existing.defaultRoute = route;
                         existing.status = status;
                         store.updateBus(existing);
@@ -259,8 +265,8 @@ class _BusesPageState extends State<BusesPage> {
                                 Text(b.busNo, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5)),
                                 Text(b.plateNumber, style: const TextStyle(fontSize: 12.5)),
                                 Text('${b.capacity}', style: const TextStyle(fontSize: 12.5)),
-                                Text(b.assignedDriver, style: const TextStyle(fontSize: 12.5)),
-                                Text(b.assignedConductor, style: const TextStyle(fontSize: 12.5)),
+                                Text(b.assignedDriverName, style: const TextStyle(fontSize: 12.5)),
+                                Text(b.assignedConductorName, style: const TextStyle(fontSize: 12.5)),
                                 Text(b.defaultRoute, style: const TextStyle(fontSize: 12.5)),
                                 StatusChip(label: b.status.label, color: busStatusColor(b.status)),
                                 Row(mainAxisSize: MainAxisSize.min, children: [
@@ -313,8 +319,8 @@ class _BusCard extends StatelessWidget {
           ]),
           const SizedBox(height: 6),
           Text('Capacity: ${bus.capacity} \u2022 Route: ${bus.defaultRoute}', style: const TextStyle(fontSize: 12.5, color: AppColors.textMuted)),
-          Text('Driver: ${bus.assignedDriver}', style: const TextStyle(fontSize: 12.5)),
-          Text('Conductor: ${bus.assignedConductor}', style: const TextStyle(fontSize: 12.5)),
+          Text('Driver: ${bus.assignedDriverName}', style: const TextStyle(fontSize: 12.5)),
+          Text('Conductor: ${bus.assignedConductorName}', style: const TextStyle(fontSize: 12.5)),
           const SizedBox(height: 8),
           Row(children: [
             TextButton.icon(onPressed: onEdit, icon: const Icon(Icons.edit_outlined, size: 16), label: const Text('Edit')),
