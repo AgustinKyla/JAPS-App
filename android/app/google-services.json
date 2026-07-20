@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "715922902130",
+    "project_id": "japs-db-49db6",
+    "storage_bucket": "japs-db-49db6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:715922902130:android:e2ebec952f164ff22486eb",
+        "android_client_info": {
+          "package_name": "com.example.japs_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyADfPngexfZe-kapYA6lk9TzCyuwN2pNXg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
