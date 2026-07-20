@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/models.dart'; // Ensure this points to your file
+import '../models/models.dart'; 
 
 class AuthService extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -34,12 +34,6 @@ class AuthService extends ChangeNotifier {
 
   Future<void> _fetchUserDetailsByUsername(String username) async {
     try {
-      // employee_details documents are keyed by employeeId, not the
-      // Firebase Auth UID, so we can't look the doc up by uid. A Firestore
-      // equality query is also case-sensitive, so instead of `where`, pull
-      // the collection and match the username ourselves - this way small
-      // casing differences between what's stored and what's typed don't
-      // cause the lookup to silently miss.
       final normalized = username.trim().toLowerCase();
       final snapshot = await _db.collection('employee_details').get();
 

@@ -128,7 +128,7 @@ class DashboardPage extends StatelessWidget {
                           child: SizedBox(
                             height: 140,
                             width: 140,
-                            // Use this inside your build method if store.approvedCount/pendingCount no longer exist
+                            // Use this inside your build method if store.approvedCount, store.pendingCount, and store.rejectedCount are available
                             child: _RemittanceDonut(
                               approved: store.remittances.where((r) => r.status == RemittanceStatus.approved).length,
                               pending: store.remittances.where((r) => r.status == RemittanceStatus.pending).length,
@@ -259,8 +259,7 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-// ==================== 📈 FIRESTORE DRIVEN LINE CHART ====================
-// ==================== 📈 FIRESTORE DRIVEN LINE CHART ====================
+// ==================== LINE CHART ====================
 class _DemandChart extends StatelessWidget {
   const _DemandChart();
 
@@ -299,7 +298,7 @@ class _DemandChart extends StatelessWidget {
                 return LineTooltipItem(
                   touchedSpot.y.toInt().toString(),
                   const TextStyle(
-                    color: Colors.white, // This makes the number white
+                    color: Colors.white, 
                     fontWeight: FontWeight.bold,
                   ),
                 );
@@ -337,7 +336,7 @@ class _DemandChart extends StatelessWidget {
         lineBarsData: [
           LineChartBarData(
             spots: actualSpots.isEmpty ? [const FlSpot(0, 0)] : actualSpots,
-            isCurved: true, // Simply set isCurved to true for bezier smoothing
+            isCurved: true, 
             color: const Color.fromARGB(255, 30, 77, 183),
             barWidth: 2.6,
             isStrokeCapRound: true,
@@ -346,7 +345,7 @@ class _DemandChart extends StatelessWidget {
           ),
           LineChartBarData(
             spots: forecastSpots.isEmpty ? [const FlSpot(6, 0)] : forecastSpots,
-            isCurved: true, // Simply set isCurved to true for bezier smoothing
+            isCurved: true, 
             color: AppColors.warning,
             barWidth: 2.6,
             isStrokeCapRound: true,
@@ -379,7 +378,7 @@ class _DemandChart extends StatelessWidget {
       // Sum ticket volume calculated from the size of tripDetails array
       double ticketCount = 0;
       for (var r in dailyRemittances) {
-        ticketCount += r.tripDetails.length * 5; // Replicating your store logic parameters
+        ticketCount += r.tripDetails.length * 5;
       }
       values[i] = ticketCount;
     }
@@ -438,7 +437,7 @@ class _DemandChart extends StatelessWidget {
   }
 }
 
-// ==================== 🍩 FIRESTORE DRIVEN DONUT CHART ====================
+// ==================== DONUT CHART ====================
 class _RemittanceDonut extends StatelessWidget {
   final int approved;
   final int pending;

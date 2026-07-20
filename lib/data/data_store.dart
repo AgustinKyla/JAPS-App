@@ -14,7 +14,7 @@ class DataStore extends ChangeNotifier {
   List<Remittance> remittances = [];
   List<ScheduleTrip> schedules = [];
 
-  // Default fallback fare settings so your dashboard doesn't crash on initial load
+  // Default fallback fare settings so the dashboard doesn't crash on initial load
   FareSettings fareSettings = FareSettings(
     minimumFare: 15.00,
     baseDistanceKm: 5.00,
@@ -33,7 +33,7 @@ class DataStore extends ChangeNotifier {
     _initRealtimeListeners();
   }
 
-  // 🔄 Set up real-time stream listeners to Firestore using your NEW collections
+  // Set up real-time stream listeners to Firestore using your NEW collections
   void _initRealtimeListeners() {
     // 1. Listen to Employees (formerly 'users')
     _db.collection('employee_details').snapshots().listen((snapshot) {
@@ -74,7 +74,7 @@ class DataStore extends ChangeNotifier {
     });
   }
 
-  // ==================== 🔥 FIRESTORE CRUD OPERATIONS ====================
+  // ==================== CRUD OPERATIONS ====================
 
   // ---- EMPLOYEES CRUD ----
   Future<void> addUser(AppUser u) async {
@@ -91,12 +91,6 @@ class DataStore extends ChangeNotifier {
       }
     }
     final newId = 'EMP-${(maxNum + 1).toString().padLeft(3, '0')}';
-
-    // Stamp the generated ID onto the model's employeeId field too —
-    // otherwise the Firestore *document ID* becomes "EMP-050", but the
-    // `employeeId` field stored inside that document (what fromFirestore
-    // actually reads back into the app) stays empty, since there's no
-    // longer a text field feeding it from the Add User form.
     u.employeeId = newId;
 
     await _db.collection('employee_details').doc(newId).set(u.toFirestore());
@@ -112,9 +106,8 @@ class DataStore extends ChangeNotifier {
 
   // ---- BUSES CRUD ----
   Future<void> addBus(Bus b) async {
-    // Uses the busNo as the document ID (e.g. BUS-01)
     final String docId = 'BUS-${b.busNo.padLeft(2, '0')}';
-    b.id = docId; // so toFirestore()'s busId field matches the doc ID
+    b.id = docId;
     await _db.collection('bus_info').doc(docId).set(b.toFirestore());
   }
 
@@ -128,9 +121,8 @@ class DataStore extends ChangeNotifier {
 
   // ---- ROUTES CRUD ----
   Future<void> addRoute(BusRoute r) async {
-    // Uses origin-destination initials as the document ID to keep it clean
     final String routeId = 'RTE-${r.origin.substring(0, 3).toUpperCase()}-${r.destination.substring(0, 3).toUpperCase()}';
-    r.id = routeId; // so toFirestore()'s routeId field matches the doc ID
+    r.id = routeId; 
     await _db.collection('route_info').doc(routeId).set(r.toFirestore());
   }
 
@@ -144,8 +136,6 @@ class DataStore extends ChangeNotifier {
 
   // ---- SCHEDULES CRUD ----
   Future<void> addSchedule(ScheduleTrip s) async {
-    // Generate the next sequential SCH-001, SCH-002, ... ID instead of
-    // letting Firestore assign a random auto-ID.
     final snapshot = await _db.collection('schedule_records').get();
     int maxNum = 0;
     final idPattern = RegExp(r'^SCH-(\d+)$');
@@ -157,7 +147,7 @@ class DataStore extends ChangeNotifier {
       }
     }
     final newId = 'SCH-${(maxNum + 1).toString().padLeft(3, '0')}';
-    s.id = newId; // so toFirestore()'s scheduleId field matches the doc ID
+    s.id = newId;
     await _db.collection('schedule_records').doc(newId).set(s.toFirestore());
   }
 
@@ -179,17 +169,6 @@ class DataStore extends ChangeNotifier {
     await _db.collection('settings').doc('fares').set(f.toFirestore());
   }
 
-  // ==================== 🧹 ONE-TIME LEGACY DATA MIGRATION ====================
-  // Rewrites every existing document in bus_info, schedule_records, and
-  // route_info through fromFirestore() -> toFirestore(), using set()
-  // (full overwrite, not merge). This drops legacy-only fields
-  // (busId, assignedDriverId, assignedConductorId, the old *Name-only
-  // shape, etc.) and brings every document to the exact same shape that
-  // the current Add/Edit forms write.
-  //
-  // Run this ONCE (e.g. from a temporary debug button), confirm the
-  // Firestore console looks consistent, then remove the button/call so
-  // it doesn't run again on every app load.
   Future<void> migrateLegacyData() async {
     final busSnap = await _db.collection('bus_info').get();
     final busBatch = _db.batch();
@@ -241,7 +220,6 @@ class DataStore extends ChangeNotifier {
 
   int get passengersMonth {
     return remittances.where((r) => r.status == RemittanceStatus.approved).fold(0, (total, r) {
-      // Sums the passengers from all trips within each remittance
       int tripPassengers = r.tripDetails.fold(0, (tSum, trip) {
         final rangeParts = trip.ticketsRange.split('-');
         if (rangeParts.length == 2) {

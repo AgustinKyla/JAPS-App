@@ -134,8 +134,6 @@ class Bus {
       plateNumber: data['plateNumber'] ?? '',
       capacity: data['capacity'] ?? 0,
       assignedDriverId: data['assignedDriverId'] ?? '',
-      // Older docs only ever stored the plain name under "assignedDriver" -
-      // keep that as a fallback so those records still display correctly.
       assignedDriverName: data['assignedDriverName'] ?? data['assignedDriver'] ?? '',
       assignedConductorId: data['assignedConductorId'] ?? '',
       assignedConductorName: data['assignedConductorName'] ?? data['assignedConductor'] ?? '',
@@ -155,9 +153,6 @@ class Bus {
       'assignedConductorName': assignedConductorName,
       'defaultRoute': defaultRoute,
       'status': status.name,
-      // Some bus_info docs already had a busId field mirroring the document
-      // ID - write it going forward so every doc has it, matching the
-      // routeId / scheduleId pattern used elsewhere.
       'busId': id,
     };
   }
@@ -193,8 +188,6 @@ class BusRoute {
       'origin': origin,
       'destination': destination,
       'distanceKm': distanceKm,
-      // Some route_info docs already had a routeId field mirroring the
-      // document ID - write it going forward so every doc has it.
       'routeId': id,
     };
   }
@@ -273,7 +266,7 @@ class Remittance {
   double get totalExpenses => expenses.values.fold(0.0, (a, b) => a + b);
   double get netGross => grossIncome - totalExpenses;
 
-  // --- New Financial Getters ---
+  // --- Financial Getters ---
   double get bonus => expenses['Bonus'] ?? 0.0;
   double get diesel => expenses['Diesel / Fuel'] ?? 0.0;
   double get tollFee => expenses['Toll Fees'] ?? 0.0;
@@ -338,7 +331,7 @@ class FareSettings {
   double minimumFare;
   double baseDistanceKm;
   double ratePerKm;
-  Map<String, double> categoryRates; // percent 0-100
+  Map<String, double> categoryRates; 
   DateTime effectiveDate;
 
   FareSettings({
@@ -382,8 +375,6 @@ class FareSettings {
   }
 }
 
-// Formats the time-of-day portion of a DateTime as "h:mm AM/PM", matching
-// the format produced by the time picker in the Schedules form.
 String _formatTimeOfDay(DateTime dt) {
   final hour12 = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
   final minute = dt.minute.toString().padLeft(2, '0');
@@ -391,9 +382,6 @@ String _formatTimeOfDay(DateTime dt) {
   return '$hour12:$minute $period';
 }
 
-// Parses a "h:mm AM/PM" string (as produced by the time picker) and
-// combines it with a calendar date into a single DateTime - the inverse of
-// _formatTimeOfDay, used so departureTime can be stored as one Timestamp.
 DateTime _combineDateAndTime(DateTime datePart, String timeText) {
   final trimmed = timeText.trim();
   final spaceIdx = trimmed.lastIndexOf(' ');
@@ -444,8 +432,6 @@ class ScheduleTrip {
     if (dateField is Timestamp) {
       tripDate = dateField.toDate();
     } else if (legacyField is Timestamp) {
-      // Old records stored the date (with a meaningless time-of-day) under
-      // the 'departureTime' key. Recover the calendar date from it.
       tripDate = legacyField.toDate();
     } else {
       tripDate = DateTime.now();
@@ -453,12 +439,8 @@ class ScheduleTrip {
 
     String depTime;
     if (legacyField is String) {
-      // New-format record: departureTime is the actual "h:mm AM/PM" text.
       depTime = legacyField;
     } else if (legacyField is Timestamp) {
-      // Old-format record: departureTime is a Timestamp whose time-of-day
-      // component IS the real departure time - format it instead of
-      // discarding it.
       depTime = _formatTimeOfDay(legacyField.toDate());
     } else {
       depTime = '';
@@ -480,9 +462,6 @@ class ScheduleTrip {
 
   Map<String, dynamic> toFirestore() {
     return {
-      // Stored as ONE Timestamp combining the date and time-of-day, matching
-      // the convention already used by the existing schedule_records docs -
-      // no separate 'date' field, so every doc has the same shape.
       'departureTime': Timestamp.fromDate(_combineDateAndTime(date, departureTime)),
       'busNo': bus,
       'route': route,
@@ -491,8 +470,6 @@ class ScheduleTrip {
       'assignedConductorId': conductorId,
       'assignedConductorName': conductor,
       'status': status,
-      // Some schedule_records docs already had a scheduleId field mirroring
-      // the document ID - write it going forward so every doc has it.
       'scheduleId': id,
     };
   }

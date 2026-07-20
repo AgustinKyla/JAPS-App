@@ -56,9 +56,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       setState(() {
         _loading = false;
         _loginError = (enteredUsername.startsWith('driver') || enteredUsername.startsWith('conductor'))
-            ? 'This portal is for Owner, Audit Teller, and Secretary accounts. '
-                'Driver and Conductor access has not been set up yet.'
-            : 'This portal is for Owner, Audit Teller, and Secretary accounts only.';
+            ? 'This portal is for Owner, and Secretary accounts. '
+                'Driver, Conductor and Audit Teller access has not been set up yet.'
+            : 'This portal is for Owner, and Secretary accounts only.';
       });
       return;
     }
@@ -75,8 +75,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
       if (user != null) {
         setState(() => _loading = false);
-        
-        // Remove the call to initUserSession that caused the error
         
         Navigator.of(context).pushReplacement(
           PageRouteBuilder(

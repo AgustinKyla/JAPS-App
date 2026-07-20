@@ -32,10 +32,6 @@ class _BusesPageState extends State<BusesPage> {
     }
 
     final busNoItems = store.buses.map((b) => b.busNo).toList();
-    // Only show the bus-number/plate picker as a dropdown when editing an
-    // existing bus. When adding a new bus, always use free-text fields so
-    // the user can type a brand new bus number/plate, even if other buses
-    // already exist.
     final bool isEditing = existing != null;
 
     final busNoCtrl = TextEditingController(text: existing?.busNo ?? '');
@@ -102,7 +98,6 @@ class _BusesPageState extends State<BusesPage> {
                   ),
                 ] else ...[
                   // No buses exist yet, so there's nothing to pick from -
-                  // let the user type the very first bus's details.
                   AppTextField(
                     label: 'Bus Number',
                     controller: busNoCtrl,
@@ -165,7 +160,7 @@ class _BusesPageState extends State<BusesPage> {
                       if (existing == null) {
                         store.addBus(Bus(
                           id: '',
-                          busNo: busNoCtrl.text.trim(), // Keep this as just "01", "02", etc.
+                          busNo: busNoCtrl.text.trim(), 
                           plateNumber: plateCtrl.text.trim(),
                           capacity: int.parse(capacityCtrl.text.trim()),
                           assignedDriverId: selectedDriver.id,

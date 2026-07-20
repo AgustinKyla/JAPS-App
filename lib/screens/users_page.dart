@@ -75,8 +75,6 @@ class _UsersPageState extends State<UsersPage> {
                     onPressed: () {
                       if (!formKey.currentState!.validate()) return;
                       if (existing == null) {
-                        // employeeId is intentionally left blank here — DataStore.addUser
-                        // generates the next sequential EMP-### and stamps it in before saving.
                         store.addUser(AppUser(
                           id: '',
                           employeeId: '',
@@ -88,8 +86,6 @@ class _UsersPageState extends State<UsersPage> {
                         ));
                         ScaffoldMessenger.of(context).showSnackBar(buildSnack('User added successfully', SnackType.success));
                       } else {
-                        // employeeId is never edited here — an existing user's employee
-                        // ID should stay fixed once assigned.
                         existing.name = nameCtrl.text.trim();
                         existing.username = usernameCtrl.text.trim();
                         if (passwordCtrl.text.isNotEmpty) existing.password = passwordCtrl.text;

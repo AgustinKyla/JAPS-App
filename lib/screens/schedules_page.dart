@@ -67,8 +67,6 @@ class _SchedulesPageState extends State<SchedulesPage> {
 
     final timeCtrl = TextEditingController(text: existing?.departureTime ?? '');
     final formKey = GlobalKey<FormState>();
-    // Preserve the trip's current status (e.g. "completed") when editing -
-    // otherwise saving an edit would silently reset it to "scheduled".
     final String status = existing?.status ?? 'scheduled';
 
     if (store.buses.isEmpty ||
@@ -104,7 +102,7 @@ class _SchedulesPageState extends State<SchedulesPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. DATE PICKER (Restored)
+              // 1. DATE PICKER 
               const Text('Date', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
               const SizedBox(height: 6),
               InkWell(
@@ -121,10 +119,6 @@ class _SchedulesPageState extends State<SchedulesPage> {
               const SizedBox(height: 14),
 
               // 2. DROPDOWNS
-              // Each value falls back to the first available item whenever the
-              // saved value no longer matches anything in the current list
-              // (e.g. a bus/route/driver/conductor was renamed or removed) -
-              // this is what was causing "Edit Trip" to crash.
               AppDropdownField<String>(
                 label: 'Bus',
                 value: store.buses.any((b) => b.busNo == bus) ? bus : store.buses.first.busNo,
@@ -165,7 +159,6 @@ class _SchedulesPageState extends State<SchedulesPage> {
 
               const SizedBox(height: 20),
 
-              // SUBMIT BUTTON (with your custom styling)
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
